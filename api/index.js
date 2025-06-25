@@ -1,7 +1,5 @@
-// Node.js + Express + Cheerio scraper para Genius
 const express = require('express');
 const fetch = require('node-fetch');
-const cheerio = require('cheerio');
 
 const app = express();
 
@@ -32,32 +30,22 @@ app.get('/api', async (req, res) => {
     });
     const html = await pageRes.text();
 
-    const $ = cheerio.load(html);
-    let lyrics = '';
-    // Tentar seletor moderno
-let blocks = $('[data-lyrics-container="true"]');
-
-if (blocks.length > 0) {
-  blocks.each((i, el) => {
-    const line = $(el).text().trim();
-    if (line) lyrics += line + '\n';
-  });
-} else {
-  // Tentar seletor antigo
-  const legacy = $('div.lyrics').text().trim();
-  if (legacy) {
-    lyrics = legacy;
-  }
-}
-
-    if (!lyrics) {
-      lyrics = $('div.lyrics').text().trim();
+    // Busca os dados JSON embutidos no script
+    const jsonMatch = html.match(/<script[^>]*>window\.__PRELOADED_STATE__ = (.*?);\s*<\/script>/);
+    if (!jsonMatch || !jsonMatch[1]) {
+      return res.json({ error: 'Bloco JSON não encontrado' });
     }
 
-    if (!lyrics) return res.json({ error: 'Letra não encontrada' });
-    
-    console.log("🎵 Letra encontrada:\n", lyrics);
-    res.json({ artist, title, url: songUrl, lyrics: lyrics.trim() });
+    const jsonData = JSON.parse(jsonMatch[1]);
+    const songData = jsonData.songPage?.lyricsData?.body?.html;
+    if (!songData) {
+      return res.json({ error: 'Letra não encontrada no JSON' });
+    }
+
+    // Remover tags HTML da letra
+    const plainLyrics = songData.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+
+    res.json({ artist, title, url: songUrl, lyrics: plainLyrics });
   } catch (err) {
     res.status(500).json({ error: 'Erro no servidor', details: err.message });
   }
