@@ -1,7 +1,7 @@
 // Node.js + Express + Cheerio scraper para Genius
-import express from 'express';
-import fetch from 'node-fetch';
-import cheerio from 'cheerio';
+const express = require('express');
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
 const app = express();
 
@@ -50,4 +50,4 @@ app.get('/api', async (req, res) => {
   }
 });
 
-export default app;
+module.exports = app;
