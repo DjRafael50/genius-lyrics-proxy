@@ -34,16 +34,29 @@ app.get('/api', async (req, res) => {
 
     const $ = cheerio.load(html);
     let lyrics = '';
-    $('[data-lyrics-container=true]').each((i, el) => {
-      lyrics += $(el).text().trim() + '\n';
-    });
+    // Tentar seletor moderno
+let blocks = $('[data-lyrics-container="true"]');
+
+if (blocks.length > 0) {
+  blocks.each((i, el) => {
+    const line = $(el).text().trim();
+    if (line) lyrics += line + '\n';
+  });
+} else {
+  // Tentar seletor antigo
+  const legacy = $('div.lyrics').text().trim();
+  if (legacy) {
+    lyrics = legacy;
+  }
+}
 
     if (!lyrics) {
       lyrics = $('div.lyrics').text().trim();
     }
 
     if (!lyrics) return res.json({ error: 'Letra não encontrada' });
-
+    
+    console.log("🎵 Letra encontrada:\n", lyrics);
     res.json({ artist, title, url: songUrl, lyrics: lyrics.trim() });
   } catch (err) {
     res.status(500).json({ error: 'Erro no servidor', details: err.message });
